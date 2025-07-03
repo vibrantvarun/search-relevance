@@ -7,7 +7,6 @@
  */
 package org.opensearch.searchrelevance.plugin;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.opensearch.searchrelevance.common.PluginConstants.EXPERIMENT_INDEX;
 import static org.opensearch.searchrelevance.common.PluginConstants.JUDGMENT_CACHE_INDEX;
@@ -20,7 +19,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 import org.mockito.Mock;
@@ -48,7 +46,6 @@ import org.opensearch.searchrelevance.dao.JudgmentCacheDao;
 import org.opensearch.searchrelevance.dao.JudgmentDao;
 import org.opensearch.searchrelevance.dao.QuerySetDao;
 import org.opensearch.searchrelevance.dao.SearchConfigurationDao;
-import org.opensearch.searchrelevance.executors.HybridSearchTaskManager;
 import org.opensearch.searchrelevance.indices.SearchRelevanceIndicesManager;
 import org.opensearch.searchrelevance.metrics.MetricsHelper;
 import org.opensearch.searchrelevance.ml.MLAccessor;
@@ -108,8 +105,7 @@ public class SearchRelevancePluginTests extends OpenSearchTestCase {
         JudgmentCacheDao.class,
         MLAccessor.class,
         MetricsHelper.class,
-        InfoStatsManager.class,
-        HybridSearchTaskManager.class
+        InfoStatsManager.class
     );
 
     @Override
@@ -121,10 +117,6 @@ public class SearchRelevancePluginTests extends OpenSearchTestCase {
 
         // Mock environment
         when(environment.settings()).thenReturn(settings);
-
-        // Mock ThreadPool to return a mock executor for SearchRelevanceExecutor
-        ExecutorService mockExecutor = mock(ExecutorService.class);
-        when(threadPool.executor("_plugin_search_relevance_executor")).thenReturn(mockExecutor);
 
         // Mock ClusterService
         when(clusterService.getClusterSettings()).thenReturn(
