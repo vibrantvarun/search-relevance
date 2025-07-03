@@ -49,7 +49,7 @@ public class JudgmentsIT extends BaseSearchRelevanceIT {
         assertNotNull(judgmentsId);
 
         // wait for completion of import action
-        Thread.sleep(DEFAULT_INTERVAL_MS);
+        Thread.sleep(1000);
 
         String getJudgmentsByIdUrl = String.join("/", JUDGMENT_INDEX, "_doc", judgmentsId);
         Response getJudgmentsResponse = makeRequest(
