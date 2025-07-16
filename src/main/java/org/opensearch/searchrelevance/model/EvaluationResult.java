@@ -26,9 +26,6 @@ public class EvaluationResult implements ToXContentObject {
     public static final String JUDGMENT_IDS = "judgmentIds";
     public static final String DOCUMENT_IDS = "documentIds";
     public static final String METRICS = "metrics";
-    public static final String EXPERIMENT_ID = "experimentId";
-    public static final String EXPERIMENT_VARIANT_ID = "experimentVariantId";
-    public static final String EXPERIMENT_VARIANT_PARAMETERS = "experimentVariantParameters";
 
     /**
      * Identifier of the system index
@@ -40,9 +37,6 @@ public class EvaluationResult implements ToXContentObject {
     private final List<String> judgmentIds;
     private final List<String> documentIds;
     private final List<Map<String, Object>> metrics;
-    private final String experimentId;
-    private final String experimentVariantId;
-    private final String experimentVariantParameters;
 
     public EvaluationResult(
         String id,
@@ -51,10 +45,7 @@ public class EvaluationResult implements ToXContentObject {
         String searchText,
         List<String> judgmentIds,
         List<String> documentIds,
-        List<Map<String, Object>> metrics,
-        String experimentId,
-        String experimentVariantId,
-        String experimentVariantParameters
+        List<Map<String, Object>> metrics
     ) {
         this.id = id;
         this.timestamp = timestamp;
@@ -63,9 +54,6 @@ public class EvaluationResult implements ToXContentObject {
         this.judgmentIds = judgmentIds;
         this.documentIds = documentIds;
         this.metrics = metrics;
-        this.experimentId = experimentId;
-        this.experimentVariantId = experimentVariantId;
-        this.experimentVariantParameters = experimentVariantParameters;
     }
 
     @Override
@@ -78,15 +66,6 @@ public class EvaluationResult implements ToXContentObject {
         xContentBuilder.field(JUDGMENT_IDS, this.judgmentIds == null ? new ArrayList<>() : this.judgmentIds);
         xContentBuilder.field(DOCUMENT_IDS, this.documentIds == null ? new ArrayList<>() : this.documentIds);
         xContentBuilder.field(METRICS, this.metrics);
-        if (this.experimentId != null) {
-            xContentBuilder.field(EXPERIMENT_ID, this.experimentId);
-        }
-        if (this.experimentVariantId != null) {
-            xContentBuilder.field(EXPERIMENT_VARIANT_ID, this.experimentVariantId);
-        }
-        if (this.experimentVariantParameters != null) {
-            xContentBuilder.field(EXPERIMENT_VARIANT_PARAMETERS, this.experimentVariantParameters);
-        }
         return xContentBuilder.endObject();
     }
 
@@ -116,17 +95,5 @@ public class EvaluationResult implements ToXContentObject {
 
     public List<Map<String, Object>> metrics() {
         return metrics;
-    }
-
-    public String experimentId() {
-        return experimentId;
-    }
-
-    public String experimentVariantId() {
-        return experimentVariantId;
-    }
-
-    public String experimentVariantParameters() {
-        return experimentVariantParameters;
     }
 }

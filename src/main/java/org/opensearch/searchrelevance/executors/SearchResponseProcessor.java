@@ -21,7 +21,6 @@ import org.opensearch.searchrelevance.dao.EvaluationResultDao;
 import org.opensearch.searchrelevance.dao.ExperimentVariantDao;
 import org.opensearch.searchrelevance.model.AsyncStatus;
 import org.opensearch.searchrelevance.model.EvaluationResult;
-import org.opensearch.searchrelevance.model.ExperimentType;
 import org.opensearch.searchrelevance.model.ExperimentVariant;
 import org.opensearch.searchrelevance.utils.TimeUtils;
 
@@ -64,10 +63,6 @@ public class SearchResponseProcessor {
             List<String> docIds = Arrays.stream(hits).map(SearchHit::getId).collect(Collectors.toList());
 
             List<Map<String, Object>> metrics = calculateEvaluationMetrics(docIds, docIdToScores, size);
-            
-            // Pass null for experiment variant parameters if not a hybrid experiment
-            String experimentVariantParameters = experimentVariant.getType() == ExperimentType.HYBRID_OPTIMIZER ? experimentVariant.getTextualParameters() : null;
-            
             EvaluationResult evaluationResult = new EvaluationResult(
                 evaluationId,
                 TimeUtils.getTimestamp(),
@@ -75,10 +70,7 @@ public class SearchResponseProcessor {
                 queryText,
                 judgmentIds,
                 docIds,
-                metrics,
-                experimentId,
-                experimentVariant.getId(),
-                experimentVariantParameters
+                metrics
             );
 
             evaluationResultDao.putEvaluationResultEfficient(
