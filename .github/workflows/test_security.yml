@@ -37,7 +37,7 @@ jobs:
         run: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-start-command }}
 
       - name: Checkout search-relevance
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: true
 
