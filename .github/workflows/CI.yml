@@ -120,7 +120,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: coverage-report-${{ matrix.os }}-${{ matrix.java }}
           path: ./
