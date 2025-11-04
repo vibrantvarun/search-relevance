@@ -55,6 +55,8 @@ public class PutSearchConfigurationTransportAction extends HandledTransportActio
             listener.onFailure(new SearchRelevanceException("Name cannot be null or empty. Request: " + request, RestStatus.BAD_REQUEST));
             return;
         }
+        String description = request.getDescription();
+
         String index = request.getIndex();
         String queryBody = request.getQueryBody();
         String searchPipeline = request.getSearchPipeline();
@@ -62,7 +64,15 @@ public class PutSearchConfigurationTransportAction extends HandledTransportActio
         StepListener<Void> createIndexStep = new StepListener<>();
         searchConfigurationDao.createIndexIfAbsent(createIndexStep);
         createIndexStep.whenComplete(v -> {
-            SearchConfiguration searchConfiguration = new SearchConfiguration(id, name, timestamp, index, queryBody, searchPipeline);
+            SearchConfiguration searchConfiguration = new SearchConfiguration(
+                id,
+                name,
+                timestamp,
+                index,
+                queryBody,
+                searchPipeline,
+                description
+            );
             searchConfigurationDao.putSearchConfiguration(searchConfiguration, listener);
         }, listener::onFailure);
     }

@@ -10,6 +10,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * Added APIs and components to implement running scheduled experiments ([#220](https://github.com/opensearch-project/search-relevance/pull/220))
 
 ### Enhancements
+* Support for adding description in Search Configuration ()[]
 
 ### Bug Fixes
 
