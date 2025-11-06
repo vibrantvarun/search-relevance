@@ -106,7 +106,8 @@ public class SearchRequestBuilder {
                 }
             }
             // Set size
-            sourceBuilder.size(size);
+            // sourceBuilder.size(size);
+            sourceBuilder.size(200);
 
             // Set search pipeline if provided
             if (searchPipeline != null && !searchPipeline.isEmpty()) {
@@ -194,7 +195,8 @@ public class SearchRequestBuilder {
                 }
             }
             // Set size
-            sourceBuilder.size(size);
+            // sourceBuilder.size(size);
+            sourceBuilder.size(200); // set 200 to match the original experiment
 
             searchRequest.source(sourceBuilder);
             return searchRequest;

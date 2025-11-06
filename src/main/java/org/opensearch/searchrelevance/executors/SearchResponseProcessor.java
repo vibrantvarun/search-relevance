@@ -7,11 +7,15 @@
  */
 package org.opensearch.searchrelevance.executors;
 
+import static org.opensearch.searchrelevance.common.MetricsConstants.PAIRWISE_FIELD_NAME_METRIC;
+import static org.opensearch.searchrelevance.common.MetricsConstants.PAIRWISE_FIELD_NAME_VALUE;
 import static org.opensearch.searchrelevance.metrics.EvaluationMetrics.calculateEvaluationMetrics;
+import static org.opensearch.searchrelevance.metrics.calculator.Evaluation.METRICS_NORMALIZED_DISCOUNTED_CUMULATIVE_GAIN_AT;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.opensearch.action.search.SearchResponse;
@@ -36,6 +40,64 @@ import lombok.extern.log4j.Log4j2;
 public class SearchResponseProcessor {
     private final EvaluationResultDao evaluationResultDao;
     private final ExperimentVariantDao experimentVariantDao;
+
+    // Track best performing configurations per query
+    private final ConcurrentHashMap<String, BestConfigurationTracker> bestConfigurationsPerQuery = new ConcurrentHashMap<>();
+    // Track if we've already logged the best configuration for a query
+    private final ConcurrentHashMap<String, Boolean> loggedQueries = new ConcurrentHashMap<>();
+    // Track aggregated statistics for weight combinations per experiment
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, Integer>> experimentWeightStats = new ConcurrentHashMap<>();
+    // Track if we've logged aggregated stats for an experiment
+    private final ConcurrentHashMap<String, Boolean> loggedExperimentStats = new ConcurrentHashMap<>();
+
+    /**
+     * Inner class to track best configuration for a query
+     */
+    private static class BestConfigurationTracker {
+        double bestNdcg = -1.0;
+        String bestConfigId;
+        String bestVariantParams;
+        String bestWeights;  // Track just the weights for easy aggregation
+        String queryText;
+        int variantsProcessed = 0;
+
+        synchronized void updateIfBetter(double ndcg, String configId, String variantParams, String query) {
+            variantsProcessed++;
+            if (ndcg > bestNdcg) {
+                bestNdcg = ndcg;
+                bestConfigId = configId;
+                bestVariantParams = variantParams;
+                bestWeights = extractWeights(variantParams);
+                queryText = query;
+            }
+        }
+
+        synchronized void logBestConfiguration() {
+            if (bestConfigId != null) {
+                log.info("===== BEST CONFIGURATION FOR QUERY =====");
+                log.info("Query: '{}'", queryText);
+                log.info("Best NDCG@10: {}", bestNdcg);
+                log.info("Best Search Configuration ID: {}", bestConfigId);
+                log.info("Best Variant Parameters: {}", bestVariantParams);
+                log.info("Best Weights: {}", bestWeights);
+                log.info("Total variants evaluated: {}", variantsProcessed);
+                log.info("=========================================");
+            }
+        }
+
+        private String extractWeights(String variantParams) {
+            if (variantParams == null) return "unknown";
+            // Format appears to be: "combination_technique, normalization, weights"
+            // Example: "arithmetic_mean, l2, 0.3;0.7"
+            String[] parts = variantParams.split(",");
+            if (parts.length >= 3) {
+                String weights = parts[parts.length - 1].trim();
+                // Convert semicolon to forward slash for better readability
+                return weights.replace(";", "/");
+            }
+            return "unknown";
+        }
+    }
 
     /**
      * Process search response and create evaluation results
@@ -65,6 +127,21 @@ public class SearchResponseProcessor {
 
             List<Map<String, Object>> metrics = calculateEvaluationMetrics(docIds, docIdToScores, size);
 
+            // Extract NDCG value from metrics
+            double ndcgValue = extractNdcgValue(metrics, size);
+
+            // Track best configuration for this query
+            if (experimentVariant.getType() == ExperimentType.HYBRID_OPTIMIZER && ndcgValue >= 0) {
+                String queryKey = experimentId + "_" + queryText;
+                BestConfigurationTracker tracker = bestConfigurationsPerQuery.computeIfAbsent(
+                    queryKey,
+                    k -> new BestConfigurationTracker()
+                );
+
+                String variantParams = experimentVariant.getTextualParameters();
+                tracker.updateIfBetter(ndcgValue, searchConfigId, variantParams, queryText);
+            }
+
             // Pass null for experiment variant parameters if not a hybrid experiment
             String experimentVariantParameters = experimentVariant.getType() == ExperimentType.HYBRID_OPTIMIZER
                 ? experimentVariant.getTextualParameters()
@@ -86,13 +163,38 @@ public class SearchResponseProcessor {
             evaluationResultDao.putEvaluationResultEfficient(
                 evaluationResult,
                 ActionListener.wrap(
-                    success -> updateExperimentVariant(experimentVariant, experimentId, searchConfigId, evaluationId, taskContext),
+                    success -> updateExperimentVariant(
+                        experimentVariant,
+                        experimentId,
+                        searchConfigId,
+                        evaluationId,
+                        taskContext,
+                        queryText
+                    ),
                     error -> handleTaskFailure(experimentVariant, error, taskContext)
                 )
             );
         } catch (Exception e) {
             handleTaskFailure(experimentVariant, e, taskContext);
         }
+    }
+
+    /**
+     * Extract NDCG value from metrics list
+     */
+    private double extractNdcgValue(List<Map<String, Object>> metrics, int k) {
+        String ndcgMetricName = METRICS_NORMALIZED_DISCOUNTED_CUMULATIVE_GAIN_AT + k;
+
+        for (Map<String, Object> metric : metrics) {
+            String metricName = (String) metric.get(PAIRWISE_FIELD_NAME_METRIC);
+            if (ndcgMetricName.equals(metricName)) {
+                Object value = metric.get(PAIRWISE_FIELD_NAME_VALUE);
+                if (value instanceof Number) {
+                    return ((Number) value).doubleValue();
+                }
+            }
+        }
+        return -1.0; // Return -1 if NDCG not found
     }
 
     private void handleNoHits(
@@ -125,7 +227,8 @@ public class SearchResponseProcessor {
         String experimentId,
         String searchConfigId,
         String evaluationId,
-        ExperimentTaskContext taskContext
+        ExperimentTaskContext taskContext,
+        String queryText
     ) {
         // Create variant directly with COMPLETED status
         ExperimentVariant completedVariant = new ExperimentVariant(
@@ -142,6 +245,153 @@ public class SearchResponseProcessor {
 
         log.debug("Scheduled write for completed experiment variant: {}", experimentVariant.getId());
         taskContext.completeVariantSuccess();
+
+        // Check if this is the last variant for this query and log best configuration
+        log.debug("logging best search configuration for query: {}", queryText);
+        checkAndLogBestConfiguration(experimentId, taskContext, searchConfigId, queryText);
+    }
+
+    /**
+     * Check if all variants are complete and log best configuration
+     */
+    private void checkAndLogBestConfiguration(
+        String experimentId,
+        ExperimentTaskContext taskContext,
+        String searchConfigId,
+        String queryText
+    ) {
+        // Log best configuration when task context indicates completion
+        // Use a unique key per experiment and query to prevent duplicate logging
+        String queryKey = experimentId + "_" + queryText;
+
+        if (queryKey != null) {
+            int completedVariants = taskContext.getSuccessfulVariants().get() + taskContext.getFailedVariants().get();
+            if (completedVariants >= taskContext.getTotalVariants() - 1) {
+                // Only log if we haven't already logged for this query
+                if (loggedQueries.putIfAbsent(queryKey, Boolean.TRUE) == null) {
+                    BestConfigurationTracker tracker = bestConfigurationsPerQuery.get(queryKey);
+                    if (tracker != null) {
+                        tracker.logBestConfiguration();
+
+                        // Track aggregated weight statistics
+                        trackWeightStatistics(experimentId, tracker.bestWeights);
+                    }
+                }
+
+                // Check if this is the last query for the experiment and log aggregated stats
+                checkAndLogAggregatedStats(experimentId);
+            }
+        }
+    }
+
+    /**
+     * Track weight statistics for aggregation
+     */
+    private void trackWeightStatistics(String experimentId, String weights) {
+        if (weights != null && !weights.equals("unknown")) {
+            ConcurrentHashMap<String, Integer> weightStats = experimentWeightStats.computeIfAbsent(
+                experimentId,
+                k -> new ConcurrentHashMap<>()
+            );
+            weightStats.merge(weights, 1, Integer::sum);
+        }
+    }
+
+    /**
+     * Check and log aggregated statistics for the experiment
+     */
+    private void checkAndLogAggregatedStats(String experimentId) {
+        // Count how many queries we've processed for this experiment
+        long queriesForExperiment = bestConfigurationsPerQuery.keySet().stream().filter(key -> key.startsWith(experimentId)).count();
+
+        long loggedQueriesForExperiment = loggedQueries.keySet().stream().filter(key -> key.startsWith(experimentId)).count();
+
+        // Debug logging to understand what's happening with multi-query experiments
+        log.debug(
+            "Checking aggregated stats for experiment {}: queries tracked={}, queries logged={}",
+            experimentId,
+            queriesForExperiment,
+            loggedQueriesForExperiment
+        );
+
+        // If all queries for this experiment have been logged, show aggregated stats
+        if (queriesForExperiment > 0 && queriesForExperiment == loggedQueriesForExperiment) {
+            if (loggedExperimentStats.putIfAbsent(experimentId, Boolean.TRUE) == null) {
+                log.info("All {} queries complete for experiment {}, logging aggregated statistics", queriesForExperiment, experimentId);
+                logAggregatedStatistics(experimentId);
+            }
+        } else {
+            log.debug("Not logging aggregated stats yet: {} of {} queries complete", loggedQueriesForExperiment, queriesForExperiment);
+        }
+    }
+
+    /**
+     * Log aggregated statistics for an experiment
+     */
+    private void logAggregatedStatistics(String experimentId) {
+        ConcurrentHashMap<String, Integer> weightStats = experimentWeightStats.get(experimentId);
+        if (weightStats != null && !weightStats.isEmpty()) {
+            log.info("===== AGGREGATED WEIGHT STATISTICS FOR EXPERIMENT =====");
+            log.info("Experiment ID: {}", experimentId);
+            log.info("Distribution of best weights across queries:");
+
+            // Sort by weight values for better readability
+            weightStats.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+                String weights = entry.getKey();
+                int count = entry.getValue();
+                log.info("  Weights {} -> {} queries", weights, count);
+            });
+
+            int totalQueries = weightStats.values().stream().mapToInt(Integer::intValue).sum();
+            log.info("Total queries analyzed: {}", totalQueries);
+
+            // Find most common weight combination
+            Map.Entry<String, Integer> mostCommon = weightStats.entrySet().stream().max(Map.Entry.comparingByValue()).orElse(null);
+
+            if (mostCommon != null) {
+                double percentage = (mostCommon.getValue() * 100.0) / totalQueries;
+                log.info(
+                    "Most common weight combination: {} ({} queries, {}%)",
+                    mostCommon.getKey(),
+                    mostCommon.getValue(),
+                    String.format("%.1f", percentage)
+                );
+            }
+
+            // Calculate and log average of best NDCGs
+            double avgBestNdcg = calculateAverageBestNDCG(experimentId);
+            if (avgBestNdcg >= 0) {
+                log.info("Average of best NDCG@10 across all queries: {}", String.format("%.4f", avgBestNdcg));
+            }
+
+            log.info("========================================================");
+        }
+    }
+
+    /**
+     * Calculate average of best NDCG values for all queries in an experiment
+     */
+    private double calculateAverageBestNDCG(String experimentId) {
+        double sumBestNdcg = 0.0;
+        int queryCount = 0;
+
+        for (Map.Entry<String, BestConfigurationTracker> entry : bestConfigurationsPerQuery.entrySet()) {
+            if (entry.getKey().startsWith(experimentId)) {
+                BestConfigurationTracker tracker = entry.getValue();
+                if (tracker.bestNdcg >= 0) {
+                    sumBestNdcg += tracker.bestNdcg;
+                    queryCount++;
+                }
+            }
+        }
+
+        if (queryCount > 0) {
+            double avgNdcg = sumBestNdcg / queryCount;
+            log.debug("Calculated average best NDCG: sum={}, count={}, avg={}", sumBestNdcg, queryCount, avgNdcg);
+            return avgNdcg;
+        }
+
+        return -1.0; // Return -1 if no queries found
     }
 
     private void handleTaskFailure(ExperimentVariant experimentVariant, Exception e, ExperimentTaskContext taskContext) {
