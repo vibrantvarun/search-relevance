@@ -119,20 +119,24 @@ public class ExperimentDao {
     }
 
     /**
-     * Get experiment by fieldId
+     * Get experiment by fieldId (async version)
      * @param fieldId - id on which experiment is to be retrieved
      * @param fieldName - field on which experiment is to be retrieved
+     * @param listener - action listener for async operation
      */
-    public SearchResponse getExperimentByFieldId(String fieldId, String fieldName) {
+    public void getExperimentByFieldId(String fieldId, String fieldName, int size, ActionListener<SearchResponse> listener) {
         if (fieldId == null || fieldId.isEmpty()) {
-            throw new SearchRelevanceException("fieldId cannot be null or empty", RestStatus.BAD_REQUEST);
+            listener.onFailure(new SearchRelevanceException("fieldId cannot be null or empty", RestStatus.BAD_REQUEST));
+            return;
         }
 
         if (fieldName == null || fieldName.isEmpty()) {
-            throw new SearchRelevanceException("fieldName cannot be null or empty", RestStatus.BAD_REQUEST);
+            listener.onFailure(new SearchRelevanceException("fieldName cannot be null or empty", RestStatus.BAD_REQUEST));
+            return;
         }
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.termQuery(fieldName, fieldId)).size(1);
-        return searchRelevanceIndicesManager.getDocByQuerySync(EXPERIMENT, sourceBuilder);
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.matchQuery(fieldName, fieldId)).size(size);
+        searchRelevanceIndicesManager.listDocsBySearchRequest(sourceBuilder, EXPERIMENT, listener);
     }
 
     /**

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.opensearch.searchrelevance.common.PluginConstants.QUERYSET_ID;
 
 import org.apache.lucene.search.TotalHits;
 import org.junit.Before;
@@ -61,7 +62,11 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
         OpenSearchDocRequest request = new OpenSearchDocRequest(querySetId);
 
         SearchResponse mockSearchResponse = createSearchResponseWithHitCount(0);
-        when(experimentDao.getExperimentByFieldId(eq(querySetId), any())).thenReturn(mockSearchResponse);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(mockSearchResponse);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(querySetId), eq(QUERYSET_ID), eq(3), any(ActionListener.class));
 
         DeleteResponse mockDeleteResponse = mock(DeleteResponse.class);
         when(mockDeleteResponse.status()).thenReturn(RestStatus.OK);
@@ -75,7 +80,7 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
-        verify(experimentDao).getExperimentByFieldId(eq(querySetId), any());
+        verify(experimentDao).getExperimentByFieldId(eq(querySetId), eq(QUERYSET_ID), eq(3), any(ActionListener.class));
         verify(querySetDao).deleteQuerySet(eq(querySetId), any(ActionListener.class));
     }
 
@@ -101,7 +106,11 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
         OpenSearchDocRequest request = new OpenSearchDocRequest(querySetId);
 
         SearchResponse mockSearchResponse = createSearchResponseWithHitCount(1);
-        when(experimentDao.getExperimentByFieldId(eq(querySetId), any())).thenReturn(mockSearchResponse);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(mockSearchResponse);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(querySetId), eq(QUERYSET_ID), eq(3), any(ActionListener.class));
 
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
@@ -111,7 +120,7 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
 
         Exception exception = exceptionCaptor.getValue();
         assertTrue(exception instanceof SearchRelevanceException);
-        assertTrue(exception.getMessage().contains("query set cannot be deleted as it is currently used by a experiment"));
+        assertTrue(exception.getMessage().contains("query set cannot be deleted as it is currently used by experiments with ids"));
         assertEquals(RestStatus.CONFLICT, ((SearchRelevanceException) exception).status());
 
         verify(querySetDao, never()).deleteQuerySet(any(), any(ActionListener.class));
@@ -121,7 +130,11 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
         String querySetId = "test-queryset-id";
         OpenSearchDocRequest request = new OpenSearchDocRequest(querySetId);
 
-        when(experimentDao.getExperimentByFieldId(eq(querySetId), any())).thenReturn(null);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(null);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(querySetId), eq(QUERYSET_ID), eq(3), any(ActionListener.class));
 
         DeleteResponse mockDeleteResponse = mock(DeleteResponse.class);
         when(mockDeleteResponse.status()).thenReturn(RestStatus.OK);
@@ -135,7 +148,7 @@ public class DeleteQuerySetTransportActionTests extends OpenSearchTestCase {
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
-        verify(experimentDao).getExperimentByFieldId(eq(querySetId), any());
+        verify(experimentDao).getExperimentByFieldId(eq(querySetId), eq(QUERYSET_ID), eq(3), any(ActionListener.class));
         verify(querySetDao).deleteQuerySet(eq(querySetId), any(ActionListener.class));
     }
 

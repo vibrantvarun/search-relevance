@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.opensearch.searchrelevance.common.PluginConstants.SEARCH_CONFIGURATION_LIST;
 
 import org.apache.lucene.search.TotalHits;
 import org.junit.Before;
@@ -68,7 +69,11 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
 
         // Mock no experiments using this search configuration
         SearchResponse mockSearchResponse = createSearchResponseWithHitCount(0);
-        when(experimentDao.getExperimentByFieldId(eq(searchConfigId), any())).thenReturn(mockSearchResponse);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(mockSearchResponse);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(searchConfigId), eq(SEARCH_CONFIGURATION_LIST), eq(3), any(ActionListener.class));
 
         DeleteResponse mockDeleteResponse = mock(DeleteResponse.class);
         when(mockDeleteResponse.status()).thenReturn(RestStatus.OK);
@@ -82,7 +87,7 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
-        verify(experimentDao).getExperimentByFieldId(eq(searchConfigId), any());
+        verify(experimentDao).getExperimentByFieldId(eq(searchConfigId), eq(SEARCH_CONFIGURATION_LIST), eq(3), any(ActionListener.class));
         verify(searchConfigurationDao).deleteSearchConfiguration(eq(searchConfigId), any(ActionListener.class));
     }
 
@@ -109,7 +114,11 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
 
         // Mock experiments using this search configuration
         SearchResponse mockSearchResponse = createSearchResponseWithHitCount(1);
-        when(experimentDao.getExperimentByFieldId(eq(searchConfigId), any())).thenReturn(mockSearchResponse);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(mockSearchResponse);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(searchConfigId), eq(SEARCH_CONFIGURATION_LIST), eq(3), any(ActionListener.class));
 
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
@@ -119,7 +128,9 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
 
         Exception exception = exceptionCaptor.getValue();
         assertTrue(exception instanceof SearchRelevanceException);
-        assertTrue(exception.getMessage().contains("search configuration cannot be deleted as it is currently used by a experiment"));
+        assertTrue(
+            exception.getMessage().contains("search configuration cannot be deleted as it is currently used by experiments with ids")
+        );
         assertEquals(RestStatus.CONFLICT, ((SearchRelevanceException) exception).status());
 
         verify(searchConfigurationDao, never()).deleteSearchConfiguration(any(), any(ActionListener.class));
@@ -130,7 +141,11 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
         OpenSearchDocRequest request = new OpenSearchDocRequest(searchConfigId);
 
         // Mock null response from experiment check
-        when(experimentDao.getExperimentByFieldId(eq(searchConfigId), any())).thenReturn(null);
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> listener = invocation.getArgument(3);
+            listener.onResponse(null);
+            return null;
+        }).when(experimentDao).getExperimentByFieldId(eq(searchConfigId), eq(SEARCH_CONFIGURATION_LIST), eq(3), any(ActionListener.class));
 
         DeleteResponse mockDeleteResponse = mock(DeleteResponse.class);
         when(mockDeleteResponse.status()).thenReturn(RestStatus.OK);
@@ -144,7 +159,7 @@ public class DeleteSearchConfigurationTransportActionTests extends OpenSearchTes
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
-        verify(experimentDao).getExperimentByFieldId(eq(searchConfigId), any());
+        verify(experimentDao).getExperimentByFieldId(eq(searchConfigId), eq(SEARCH_CONFIGURATION_LIST), eq(3), any(ActionListener.class));
         verify(searchConfigurationDao).deleteSearchConfiguration(eq(searchConfigId), any(ActionListener.class));
     }
 

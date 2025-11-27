@@ -341,13 +341,6 @@ public class SearchRelevanceIndicesManager {
         return null;
     }
 
-    public SearchResponse getDocByQuerySync(final SearchRelevanceIndices index, final SearchSourceBuilder searchSourceBuilder) {
-        SearchRequest searchRequest = new SearchRequest(index.getIndexName());
-        searchRequest.source(searchSourceBuilder);
-
-        return client.search(searchRequest).actionGet();
-    }
-
     /**
      * List docs by search request
      * @param searchSourceBuilder - search source builder to be executed
