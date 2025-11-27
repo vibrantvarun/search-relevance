@@ -14,7 +14,6 @@ import java.io.IOException;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -28,7 +27,6 @@ import org.opensearch.searchrelevance.model.Judgment;
 public class JudgmentDao {
     private final SearchRelevanceIndicesManager searchRelevanceIndicesManager;
 
-    @Inject
     public JudgmentDao(SearchRelevanceIndicesManager searchRelevanceIndicesManager) {
         this.searchRelevanceIndicesManager = searchRelevanceIndicesManager;
     }

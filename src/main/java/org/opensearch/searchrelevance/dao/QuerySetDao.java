@@ -21,7 +21,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -42,7 +41,6 @@ public class QuerySetDao {
     private static final Logger LOGGER = LogManager.getLogger(QuerySetDao.class);
     private final SearchRelevanceIndicesManager searchRelevanceIndicesManager;
 
-    @Inject
     public QuerySetDao(SearchRelevanceIndicesManager searchRelevanceIndicesManager) {
         this.searchRelevanceIndicesManager = searchRelevanceIndicesManager;
     }

@@ -20,7 +20,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.StepListener;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.common.inject.Inject;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -38,7 +37,6 @@ public class JudgmentCacheDao {
     private static final Logger LOGGER = LogManager.getLogger(JudgmentCacheDao.class);
     private final SearchRelevanceIndicesManager searchRelevanceIndicesManager;
 
-    @Inject
     public JudgmentCacheDao(SearchRelevanceIndicesManager searchRelevanceIndicesManager) {
         this.searchRelevanceIndicesManager = searchRelevanceIndicesManager;
     }
