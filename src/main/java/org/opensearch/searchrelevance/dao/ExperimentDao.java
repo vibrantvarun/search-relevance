@@ -119,6 +119,23 @@ public class ExperimentDao {
     }
 
     /**
+     * Get experiment by fieldId
+     * @param fieldId - id on which experiment is to be retrieved
+     * @param fieldName - field on which experiment is to be retrieved
+     */
+    public SearchResponse getExperimentByFieldId(String fieldId, String fieldName) {
+        if (fieldId == null || fieldId.isEmpty()) {
+            throw new SearchRelevanceException("fieldId cannot be null or empty", RestStatus.BAD_REQUEST);
+        }
+
+        if (fieldName == null || fieldName.isEmpty()) {
+            throw new SearchRelevanceException("fieldName cannot be null or empty", RestStatus.BAD_REQUEST);
+        }
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.termQuery(fieldName, fieldId)).size(1);
+        return searchRelevanceIndicesManager.getDocByQuerySync(EXPERIMENT, sourceBuilder);
+    }
+
+    /**
      * List experiment by source builder
      * @param sourceBuilder - source builder to be searched
      * @param listener - action lister for async operation
