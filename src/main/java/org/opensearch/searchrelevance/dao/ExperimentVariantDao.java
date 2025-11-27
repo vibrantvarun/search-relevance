@@ -7,6 +7,7 @@
  */
 package org.opensearch.searchrelevance.dao;
 
+import static org.opensearch.searchrelevance.common.PluginConstants.EXPERIMENT_ID;
 import static org.opensearch.searchrelevance.indices.SearchRelevanceIndices.EXPERIMENT_VARIANT;
 
 import java.io.IOException;
@@ -143,7 +144,7 @@ public class ExperimentVariantDao {
      * @param listener - action listener for async operation
      */
     public void deleteExperimentVariantByExperimentId(final String experimentId, final ActionListener<BulkByScrollResponse> listener) {
-        searchRelevanceIndicesManager.deleteByExperimentId(experimentId, EXPERIMENT_VARIANT, listener);
+        searchRelevanceIndicesManager.deleteByQuery(experimentId, EXPERIMENT_ID, EXPERIMENT_VARIANT, listener);
     }
 
     /**

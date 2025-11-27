@@ -7,6 +7,7 @@
  */
 package org.opensearch.searchrelevance.dao;
 
+import static org.opensearch.searchrelevance.common.PluginConstants.EXPERIMENT_ID;
 import static org.opensearch.searchrelevance.indices.SearchRelevanceIndices.EVALUATION_RESULT;
 
 import java.io.IOException;
@@ -102,7 +103,7 @@ public class EvaluationResultDao {
      * @param listener - action listener for async operation
      */
     public void deleteEvaluationResultByExperimentId(final String experimentId, final ActionListener<BulkByScrollResponse> listener) {
-        searchRelevanceIndicesManager.deleteByExperimentId(experimentId, EVALUATION_RESULT, listener);
+        searchRelevanceIndicesManager.deleteByQuery(experimentId, EXPERIMENT_ID, EVALUATION_RESULT, listener);
     }
 
     /**

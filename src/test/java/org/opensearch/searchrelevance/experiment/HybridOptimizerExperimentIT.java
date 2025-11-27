@@ -76,6 +76,9 @@ public class HybridOptimizerExperimentIT extends BaseExperimentIT {
 
             deleteHybridOptimizerExperiment(experimentId);
 
+            // Wait for all results and variants to get deleted.
+            Thread.sleep(DEFAULT_INTERVAL_MS);
+
             int countOfExperimentVariantAfterDeletion = findExperimentResultCount(EXPERIMENT_VARIANT_INDEX, experimentId);
             assertEquals(0, countOfExperimentVariantAfterDeletion);
 

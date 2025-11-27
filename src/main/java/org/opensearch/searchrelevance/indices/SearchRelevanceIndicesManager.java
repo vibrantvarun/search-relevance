@@ -405,20 +405,22 @@ public class SearchRelevanceIndicesManager {
     }
 
     /**
-     * Delete entity by experimentId
-     * @param experimentId - search source builder to be executed
-     * @param index - index to be executed
+     * Delete by query
+     * @param fieldId - field id need to be deleted
+     * @param fieldName - field name need to be deleted
+     * @param index - index on which delete operation has to be performed
      * @param listener - action listener for async action
      */
-    public void deleteByExperimentId(
-        final String experimentId,
+    public void deleteByQuery(
+        final String fieldId,
+        final String fieldName,
         final SearchRelevanceIndices index,
         final ActionListener<BulkByScrollResponse> listener
     ) {
         DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(index.getIndexName());
         deleteByQueryRequest.setConflicts("proceed");
         deleteByQueryRequest.setBatchSize(1000);
-        deleteByQueryRequest.setQuery(QueryBuilders.termQuery("experimentId", experimentId));
+        deleteByQueryRequest.setQuery(QueryBuilders.termQuery(fieldName, fieldId));
 
         client.execute(DeleteByQueryAction.INSTANCE, deleteByQueryRequest, listener);
     }
