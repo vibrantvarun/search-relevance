@@ -45,7 +45,7 @@ public class JudgmentCacheDao {
 
     /**
      * Create judgment cache index if not exists
-     * @param stepListener - step lister for async operation
+     * @param stepListener - step listener for async operation
      */
     public void createIndexIfAbsent(final StepListener<Void> stepListener) {
         searchRelevanceIndicesManager.createIndexIfAbsent(JUDGMENT_CACHE, stepListener);
@@ -54,7 +54,7 @@ public class JudgmentCacheDao {
     /**
      * Stores judgment cache to in the system index
      * @param judgmentCache - Judgment cache content to be stored
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void putJudgementCache(final JudgmentCache judgmentCache, final ActionListener listener) {
         if (judgmentCache == null) {

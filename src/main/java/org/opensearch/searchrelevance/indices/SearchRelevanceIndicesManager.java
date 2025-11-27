@@ -32,6 +32,9 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.reindex.BulkByScrollResponse;
+import org.opensearch.index.reindex.DeleteByQueryAction;
+import org.opensearch.index.reindex.DeleteByQueryRequest;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.searchrelevance.exception.SearchRelevanceException;
@@ -60,7 +63,7 @@ public class SearchRelevanceIndicesManager {
     /**
      * Create a search relevance index if not exists
      * @param index - index to be created
-     * @param stepListener - step lister
+     * @param stepListener - step listener
      */
     public void createIndexIfAbsent(final SearchRelevanceIndices index, final StepListener<Void> stepListener) {
         String indexName = index.getIndexName();
@@ -122,7 +125,7 @@ public class SearchRelevanceIndicesManager {
      * @param docId - document id need to be executed
      * @param xContentBuilder - content need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void putDoc(
         final String docId,
@@ -138,7 +141,7 @@ public class SearchRelevanceIndicesManager {
      * @param docId - document id need to be executed
      * @param xContentBuilder - content need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void putDocEfficient(
         final String docId,
@@ -155,7 +158,7 @@ public class SearchRelevanceIndicesManager {
      * @param xContentBuilder - content need to be executed
      * @param index - system index
      * @param refreshPolicy - refresh policy to use
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void putDocWithRefreshPolicy(
         final String docId,
@@ -191,7 +194,7 @@ public class SearchRelevanceIndicesManager {
      * @param docId - document id need to be executed
      * @param xContentBuilder - content need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void updateDoc(
         final String docId,
@@ -207,7 +210,7 @@ public class SearchRelevanceIndicesManager {
      * @param docId - document id need to be executed
      * @param xContentBuilder - content need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void updateDocEfficient(
         final String docId,
@@ -224,7 +227,7 @@ public class SearchRelevanceIndicesManager {
      * @param xContentBuilder - content need to be executed
      * @param index - system index
      * @param refreshPolicy - refresh policy to use
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void updateDocWithRefreshPolicy(
         final String docId,
@@ -258,7 +261,7 @@ public class SearchRelevanceIndicesManager {
      * Delete a doc by doc id
      * @param docId - document id need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public void deleteDocByDocId(final String docId, final SearchRelevanceIndices index, final ActionListener<DeleteResponse> listener) {
         SearchOperationContext searchOperationContext = SearchOperationContext.builder().index(index).documentId(docId).build();
@@ -293,7 +296,7 @@ public class SearchRelevanceIndicesManager {
      * Get a doc by doc id
      * @param docId - document id need to be executed
      * @param index - system index
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public SearchResponse getDocByDocId(final String docId, final SearchRelevanceIndices index, final ActionListener<?> listener) {
         SearchOperationContext searchOperationContext = SearchOperationContext.builder().index(index).documentId(docId).build();
@@ -345,7 +348,7 @@ public class SearchRelevanceIndicesManager {
      * List docs by search request
      * @param searchSourceBuilder - search source builder to be executed
      * @param index - index to be executed
-     * @param listener - action lister for async action
+     * @param listener - action listener for async action
      */
     public SearchResponse listDocsBySearchRequest(
         final SearchSourceBuilder searchSourceBuilder,
@@ -399,6 +402,25 @@ public class SearchRelevanceIndicesManager {
         };
         executeAction(listener, searchOperationContext, action);
         return null;
+    }
+
+    /**
+     * Delete entity by experimentId
+     * @param experimentId - search source builder to be executed
+     * @param index - index to be executed
+     * @param listener - action listener for async action
+     */
+    public void deleteByExperimentId(
+        final String experimentId,
+        final SearchRelevanceIndices index,
+        final ActionListener<BulkByScrollResponse> listener
+    ) {
+        DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(index.getIndexName());
+        deleteByQueryRequest.setConflicts("proceed");
+        deleteByQueryRequest.setBatchSize(1000);
+        deleteByQueryRequest.setQuery(QueryBuilders.termQuery("experimentId", experimentId));
+
+        client.execute(DeleteByQueryAction.INSTANCE, deleteByQueryRequest, listener);
     }
 
     /**

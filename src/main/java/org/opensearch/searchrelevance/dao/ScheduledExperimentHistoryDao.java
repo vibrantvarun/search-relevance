@@ -41,7 +41,7 @@ public class ScheduledExperimentHistoryDao {
 
     /**
      * Create scheduled experiment history index if not exists
-     * @param stepListener - step lister for async operation
+     * @param stepListener - step listener for async operation
      */
     public void createIndexIfAbsent(final StepListener<Void> stepListener) {
         searchRelevanceIndicesManager.createIndexIfAbsent(SCHEDULED_EXPERIMENT_HISTORY, stepListener);
@@ -50,7 +50,7 @@ public class ScheduledExperimentHistoryDao {
     /**
      * Stores scheduled experiment result in the system index
      * @param scheduledExperimentResult - Scheduled experiment result content to be stored
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void putScheduledExperimentResult(final ScheduledExperimentResult scheduledExperimentResult, final ActionListener listener) {
         if (scheduledExperimentResult == null) {
@@ -89,7 +89,7 @@ public class ScheduledExperimentHistoryDao {
     /**
      * Delete scheduled experiment result by scheduledExperimentResultId
      * @param scheduledExperimentResultId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void deleteScheduledExperimentResult(final String scheduledExperimentResultId, final ActionListener<DeleteResponse> listener) {
         searchRelevanceIndicesManager.deleteDocByDocId(scheduledExperimentResultId, SCHEDULED_EXPERIMENT_HISTORY, listener);
@@ -98,7 +98,7 @@ public class ScheduledExperimentHistoryDao {
     /**
      * Get scheduled experiment result by scheduledExperimentResultId
      * @param scheduledExperimentResultId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse getScheduledExperimentResult(String scheduledExperimentResultId, ActionListener<SearchResponse> listener) {
         if (scheduledExperimentResultId == null || scheduledExperimentResultId.isEmpty()) {
@@ -113,7 +113,7 @@ public class ScheduledExperimentHistoryDao {
     /**
      * List scheduled experiment result by source builder
      * @param sourceBuilder - source builder to be searched
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse listScheduledExperimentResult(SearchSourceBuilder sourceBuilder, ActionListener<SearchResponse> listener) {
         // Apply default values if not set

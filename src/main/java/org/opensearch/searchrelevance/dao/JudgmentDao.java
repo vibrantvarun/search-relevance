@@ -35,7 +35,7 @@ public class JudgmentDao {
 
     /**
      * Create judgment index if not exists
-     * @param stepListener - step lister for async operation
+     * @param stepListener - step listener for async operation
      */
     public void createIndexIfAbsent(final StepListener<Void> stepListener) {
         searchRelevanceIndicesManager.createIndexIfAbsent(JUDGMENT, stepListener);
@@ -44,7 +44,7 @@ public class JudgmentDao {
     /**
      * Stores judgment to in the system index
      * @param judgment - Judgment content to be stored
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void putJudgement(final Judgment judgment, final ActionListener listener) {
         if (judgment == null) {
@@ -83,7 +83,7 @@ public class JudgmentDao {
     /**
      * Delete judgment by judgmentID
      * @param judgmentId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void deleteJudgment(final String judgmentId, final ActionListener<DeleteResponse> listener) {
         searchRelevanceIndicesManager.deleteDocByDocId(judgmentId, JUDGMENT, listener);
@@ -92,7 +92,7 @@ public class JudgmentDao {
     /**
      * Get judgment by judgmentId
      * @param judgmentId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse getJudgment(String judgmentId, ActionListener<SearchResponse> listener) {
         if (judgmentId == null || judgmentId.isEmpty()) {
@@ -117,7 +117,7 @@ public class JudgmentDao {
     /**
      * List judgment by source builder
      * @param sourceBuilder - source builder to be searched
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse listJudgment(SearchSourceBuilder sourceBuilder, ActionListener<SearchResponse> listener) {
         // Apply default values if not set

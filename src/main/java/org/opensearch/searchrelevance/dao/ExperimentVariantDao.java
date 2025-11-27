@@ -20,6 +20,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.searchrelevance.exception.SearchRelevanceException;
 import org.opensearch.searchrelevance.indices.SearchRelevanceIndicesManager;
@@ -37,7 +38,7 @@ public class ExperimentVariantDao {
 
     /**
      * Create experiment variant index if not exists
-     * @param stepListener - step lister for async operation
+     * @param stepListener - step listener for async operation
      */
     public void createIndexIfAbsent(final StepListener<Void> stepListener) {
         searchRelevanceIndicesManager.createIndexIfAbsent(EXPERIMENT_VARIANT, stepListener);
@@ -46,7 +47,7 @@ public class ExperimentVariantDao {
     /**
      * Stores experiment variant to in the system index
      * @param experimentVariant - Experiment content to be stored
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void putExperimentVariant(final ExperimentVariant experimentVariant, final ActionListener listener) {
         if (Objects.isNull(experimentVariant)) {
@@ -68,7 +69,7 @@ public class ExperimentVariantDao {
     /**
      * Stores experiment variant to in the system index with efficient refresh policy (recommended for experiments)
      * @param experimentVariant - Experiment content to be stored
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void putExperimentVariantEfficient(final ExperimentVariant experimentVariant, final ActionListener listener) {
         if (Objects.isNull(experimentVariant)) {
@@ -107,7 +108,7 @@ public class ExperimentVariantDao {
     /**
      * Update experiment variant with efficient refresh policy (recommended for experiments)
      * @param experimentVariant - Experiment variant to be updated
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void updateExperimentVariantEfficient(final ExperimentVariant experimentVariant, final ActionListener listener) {
         if (experimentVariant == null) {
@@ -127,18 +128,28 @@ public class ExperimentVariantDao {
     }
 
     /**
-     * Delete experiment variant by experimentId
+     * Delete experiment variant by experimentVariantId
      * @param experimentVariantId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public void deleteExperimentVariant(final String experimentVariantId, final ActionListener<DeleteResponse> listener) {
         searchRelevanceIndicesManager.deleteDocByDocId(experimentVariantId, EXPERIMENT_VARIANT, listener);
     }
 
     /**
+     * Delete experiment variant by experimentId
+     * @param experimentId - id to be deleted
+     *
+     * @param listener - action listener for async operation
+     */
+    public void deleteExperimentVariantByExperimentId(final String experimentId, final ActionListener<BulkByScrollResponse> listener) {
+        searchRelevanceIndicesManager.deleteByExperimentId(experimentId, EXPERIMENT_VARIANT, listener);
+    }
+
+    /**
      * Get experiment variant by id
      * @param experimentVariantId - id to be deleted
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse getExperiment(String experimentVariantId, ActionListener<SearchResponse> listener) {
         if (experimentVariantId == null || experimentVariantId.isEmpty()) {
@@ -151,7 +162,7 @@ public class ExperimentVariantDao {
     /**
      * List experiment variant by source builder
      * @param sourceBuilder - source builder to be searched
-     * @param listener - action lister for async operation
+     * @param listener - action listener for async operation
      */
     public SearchResponse listExperimentVariant(SearchSourceBuilder sourceBuilder, ActionListener<SearchResponse> listener) {
         // Apply default values if not set
