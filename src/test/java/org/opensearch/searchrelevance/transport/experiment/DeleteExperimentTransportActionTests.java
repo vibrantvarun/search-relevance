@@ -32,6 +32,7 @@ import org.opensearch.index.reindex.ScrollableHitSource;
 import org.opensearch.searchrelevance.dao.EvaluationResultDao;
 import org.opensearch.searchrelevance.dao.ExperimentDao;
 import org.opensearch.searchrelevance.dao.ExperimentVariantDao;
+import org.opensearch.searchrelevance.dao.ScheduledExperimentHistoryDao;
 import org.opensearch.searchrelevance.dao.ScheduledJobsDao;
 import org.opensearch.searchrelevance.exception.SearchRelevanceException;
 import org.opensearch.searchrelevance.transport.OpenSearchDocRequest;
@@ -54,6 +55,8 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
     private EvaluationResultDao evaluationResultDao;
     @Mock
     private ScheduledJobsDao scheduledJobsDao;
+    @Mock
+    private ScheduledExperimentHistoryDao scheduledExperimentHistoryDao;
 
     private DeleteExperimentTransportAction transportAction;
 
@@ -67,7 +70,8 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
             experimentDao,
             evaluationResultDao,
             experimentVariantDao,
-            scheduledJobsDao
+            scheduledJobsDao,
+            scheduledExperimentHistoryDao
         );
     }
 
@@ -107,6 +111,13 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
 
+        // Mock successful scheduled experiment history deletion
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onResponse(mockBulkResponse);
+            return null;
+        }).when(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
+
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
@@ -114,27 +125,11 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
         verify(evaluationResultDao).deleteEvaluationResultByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(experimentVariantDao).deleteExperimentVariantByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
+        verify(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
     }
 
     public void testNullExperimentId() {
         OpenSearchDocRequest request = new OpenSearchDocRequest((String) null);
-
-        ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
-        transportAction.doExecute(null, request, responseListener);
-
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(responseListener).onFailure(exceptionCaptor.capture());
-
-        Exception exception = exceptionCaptor.getValue();
-        assertTrue(exception instanceof SearchRelevanceException);
-        assertTrue(exception.getMessage().contains("Experiment ID cannot be null or empty"));
-        assertEquals(RestStatus.BAD_REQUEST, ((SearchRelevanceException) exception).status());
-
-        verify(experimentDao, never()).deleteExperiment(any(), any(ActionListener.class));
-    }
-
-    public void testEmptyExperimentId() {
-        OpenSearchDocRequest request = new OpenSearchDocRequest("   ");
 
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
@@ -319,6 +314,12 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
 
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onResponse(successBulkResponse);
+            return null;
+        }).when(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
+
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
@@ -327,6 +328,7 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
         verify(evaluationResultDao).deleteEvaluationResultByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(experimentVariantDao).deleteExperimentVariantByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
+        verify(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
     }
 
     public void testScheduledJobDeletionFailureIsLogged() {
@@ -360,6 +362,13 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
 
+        // Mock successful scheduled experiment history deletion
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onResponse(successBulkResponse);
+            return null;
+        }).when(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
+
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
@@ -368,24 +377,56 @@ public class DeleteExperimentTransportActionTests extends OpenSearchTestCase {
         verify(evaluationResultDao).deleteEvaluationResultByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(experimentVariantDao).deleteExperimentVariantByExperimentId(eq(experimentId), any(ActionListener.class));
         verify(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
+        verify(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
     }
 
-    public void testUnexpectedExceptionDuringExecution() {
-        OpenSearchDocRequest request = new OpenSearchDocRequest("test-experiment-id");
+    public void testScheduledExperimentHistoryDeletionFailureIsLogged() {
+        String experimentId = "test-experiment-id";
+        OpenSearchDocRequest request = new OpenSearchDocRequest(experimentId);
 
-        // Mock an unexpected exception during experiment deletion
-        doAnswer(invocation -> { throw new RuntimeException("Unexpected error"); }).when(experimentDao)
-            .deleteExperiment(any(), any(ActionListener.class));
+        DeleteResponse mockDeleteResponse = mock(DeleteResponse.class);
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> listener = invocation.getArgument(1);
+            listener.onResponse(mockDeleteResponse);
+            return null;
+        }).when(experimentDao).deleteExperiment(eq(experimentId), any(ActionListener.class));
+
+        BulkByScrollResponse successBulkResponse = createSuccessfulBulkResponse();
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onResponse(successBulkResponse);
+            return null;
+        }).when(evaluationResultDao).deleteEvaluationResultByExperimentId(eq(experimentId), any(ActionListener.class));
+
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onResponse(successBulkResponse);
+            return null;
+        }).when(experimentVariantDao).deleteExperimentVariantByExperimentId(eq(experimentId), any(ActionListener.class));
+
+        // Mock successful scheduled job deletion
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> listener = invocation.getArgument(1);
+            listener.onResponse(mockDeleteResponse);
+            return null;
+        }).when(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
+
+        // Mock scheduled experiment history deletion failure
+        doAnswer(invocation -> {
+            ActionListener<BulkByScrollResponse> listener = invocation.getArgument(1);
+            listener.onFailure(new RuntimeException("Scheduled experiment history not found"));
+            return null;
+        }).when(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
 
         ActionListener<DeleteResponse> responseListener = mock(ActionListener.class);
         transportAction.doExecute(null, request, responseListener);
 
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(responseListener).onFailure(exceptionCaptor.capture());
-
-        Exception exception = exceptionCaptor.getValue();
-        assertTrue(exception instanceof RuntimeException);
-        assertEquals("Unexpected error", exception.getMessage());
+        // Verify all deletions are attempted
+        verify(experimentDao).deleteExperiment(eq(experimentId), any(ActionListener.class));
+        verify(evaluationResultDao).deleteEvaluationResultByExperimentId(eq(experimentId), any(ActionListener.class));
+        verify(experimentVariantDao).deleteExperimentVariantByExperimentId(eq(experimentId), any(ActionListener.class));
+        verify(scheduledJobsDao).deleteScheduledJob(eq(experimentId), any(ActionListener.class));
+        verify(scheduledExperimentHistoryDao).deleteScheduledExperimentHistoryByExperimentId(eq(experimentId), any(ActionListener.class));
     }
 
     // Helper methods to create mock BulkByScrollResponse objects

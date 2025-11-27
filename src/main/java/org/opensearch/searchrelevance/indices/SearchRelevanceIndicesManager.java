@@ -7,6 +7,9 @@
  */
 package org.opensearch.searchrelevance.indices;
 
+import static org.opensearch.searchrelevance.common.PluginConstants.BATCH_SIZE_FOR_DELETE_BY_QUERY;
+import static org.opensearch.searchrelevance.common.PluginConstants.PROCEED;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -418,8 +421,8 @@ public class SearchRelevanceIndicesManager {
         final ActionListener<BulkByScrollResponse> listener
     ) {
         DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(index.getIndexName());
-        deleteByQueryRequest.setConflicts("proceed");
-        deleteByQueryRequest.setBatchSize(1000);
+        deleteByQueryRequest.setConflicts(PROCEED);
+        deleteByQueryRequest.setBatchSize(BATCH_SIZE_FOR_DELETE_BY_QUERY);
         deleteByQueryRequest.setQuery(QueryBuilders.termQuery(fieldName, fieldId));
 
         client.execute(DeleteByQueryAction.INSTANCE, deleteByQueryRequest, listener);

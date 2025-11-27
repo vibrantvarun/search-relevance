@@ -18,6 +18,7 @@ import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.searchrelevance.dao.EvaluationResultDao;
 import org.opensearch.searchrelevance.dao.ExperimentDao;
 import org.opensearch.searchrelevance.dao.ExperimentVariantDao;
+import org.opensearch.searchrelevance.dao.ScheduledExperimentHistoryDao;
 import org.opensearch.searchrelevance.dao.ScheduledJobsDao;
 import org.opensearch.searchrelevance.exception.SearchRelevanceException;
 import org.opensearch.searchrelevance.transport.OpenSearchDocRequest;
@@ -36,6 +37,7 @@ public class DeleteExperimentTransportAction extends HandledTransportAction<Open
     private final ExperimentVariantDao experimentVariantDao;
     private final EvaluationResultDao evaluationResultDao;
     private final ScheduledJobsDao scheduledJobsDao;
+    private final ScheduledExperimentHistoryDao scheduledExperimentHistoryDao;
 
     @Inject
     public DeleteExperimentTransportAction(
@@ -45,7 +47,8 @@ public class DeleteExperimentTransportAction extends HandledTransportAction<Open
         ExperimentDao experimentDao,
         EvaluationResultDao evaluationResultDao,
         ExperimentVariantDao experimentVariantDao,
-        ScheduledJobsDao scheduledJobsDao
+        ScheduledJobsDao scheduledJobsDao,
+        ScheduledExperimentHistoryDao scheduledExperimentHistoryDao
     ) {
         super(DeleteExperimentAction.NAME, transportService, actionFilters, OpenSearchDocRequest::new);
         this.clusterService = clusterService;
@@ -53,6 +56,7 @@ public class DeleteExperimentTransportAction extends HandledTransportAction<Open
         this.experimentVariantDao = experimentVariantDao;
         this.evaluationResultDao = evaluationResultDao;
         this.scheduledJobsDao = scheduledJobsDao;
+        this.scheduledExperimentHistoryDao = scheduledExperimentHistoryDao;
     }
 
     @Override
@@ -140,6 +144,17 @@ public class DeleteExperimentTransportAction extends HandledTransportAction<Open
                 @Override
                 public void onFailure(Exception e) {
                     log.error("Failed to delete schedule job for the experiment [{}]", experimentId, e);
+                }
+            });
+
+            // 5. Delete scheduled experiment history corresponding to the experiment.
+            scheduledExperimentHistoryDao.deleteScheduledExperimentHistoryByExperimentId(experimentId, new ActionListener<>() {
+                @Override
+                public void onResponse(BulkByScrollResponse bulkByScrollResponse) {}
+
+                @Override
+                public void onFailure(Exception e) {
+                    log.error("Failed to delete schedule experiment history for the experiment [{}]", experimentId, e);
                 }
             });
         } catch (Exception e) {

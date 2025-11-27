@@ -7,6 +7,7 @@
  */
 package org.opensearch.searchrelevance.dao;
 
+import static org.opensearch.searchrelevance.common.PluginConstants.EXPERIMENT_ID;
 import static org.opensearch.searchrelevance.indices.SearchRelevanceIndices.SCHEDULED_EXPERIMENT_HISTORY;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.searchrelevance.exception.SearchRelevanceException;
 import org.opensearch.searchrelevance.indices.SearchRelevanceIndicesManager;
@@ -93,6 +95,18 @@ public class ScheduledExperimentHistoryDao {
      */
     public void deleteScheduledExperimentResult(final String scheduledExperimentResultId, final ActionListener<DeleteResponse> listener) {
         searchRelevanceIndicesManager.deleteDocByDocId(scheduledExperimentResultId, SCHEDULED_EXPERIMENT_HISTORY, listener);
+    }
+
+    /**
+     * Delete scheduled experiment history by experimentId
+     * @param experimentId - id to be deleted
+     * @param listener - action listener for async operation
+     */
+    public void deleteScheduledExperimentHistoryByExperimentId(
+        final String experimentId,
+        final ActionListener<BulkByScrollResponse> listener
+    ) {
+        searchRelevanceIndicesManager.deleteByQuery(experimentId, EXPERIMENT_ID, SCHEDULED_EXPERIMENT_HISTORY, listener);
     }
 
     /**
