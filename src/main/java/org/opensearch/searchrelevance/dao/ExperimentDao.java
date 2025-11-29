@@ -135,7 +135,7 @@ public class ExperimentDao {
             return;
         }
 
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.matchQuery(fieldName, fieldId)).size(size);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder().query(QueryBuilders.termQuery(fieldName, fieldId)).size(size);
         searchRelevanceIndicesManager.listDocsBySearchRequest(sourceBuilder, EXPERIMENT, listener);
     }
 
